@@ -1,3 +1,4 @@
+var _ = require('lodash');
 // 指令数组
 const actions = [
 	{
@@ -40,6 +41,8 @@ interface ActionsItem {
 	values: valuesItem[];
 }
 
+let range: Range = null; // 用于缓存Range对象
+
 export default class YangEditor {
 	constructor(dom: string) {
 		if (!dom) {
@@ -61,9 +64,18 @@ export default class YangEditor {
 		// 设置可编辑区域
 		editContent.contentEditable = 'true';
 		editContent.appendChild(p);
-        // 指令区域
+		// 鼠标在编辑区域移动
+
+		editContent.onmousemove = _.debounce(() => {
+			let selection = window.getSelection();
+			if (!selection.isCollapsed) {
+				range = selection.getRangeAt(0); // 返回选区包含的指定区域（Range）的引用
+				console.log('range: ', range);
+			}
+		}, 100);
+		// 指令区域
 		miniEdit.appendChild(editHeader);
-        // 可编辑区域
+		// 可编辑区域
 		miniEdit.appendChild(editContent);
 		editWrapper.appendChild(miniEdit);
 	}
@@ -75,8 +87,15 @@ export default class YangEditor {
 			select.add(new Option(item.text, item.value));
 			select.id = `${commandItem.command}`;
 		});
+
 		// select标签onchange事件
 		select.onchange = () => {
+			let selection = window.getSelection();
+
+			selection.removeRange(selection.getRangeAt(0)); // 将Range对象将从选区当中移除。
+
+			selection.addRange(range); // 一个区域（Range）对象将被加入选区。
+
 			this.execCommand(commandItem.command, select.options[select.selectedIndex].value);
 		};
 		return select;
